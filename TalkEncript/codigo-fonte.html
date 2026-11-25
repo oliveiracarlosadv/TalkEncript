@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://nominatim.openstreetmap.org https://photon.komoot.io https://overpass-api.de; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="description" content="TalkEncript: relatório de integridade (hash) de conversas exportadas do WhatsApp, Telegram e outros aplicativos, com verificação por qualquer meio.">
+  <meta name="author" content="Carlos Alexandre Albuquerque Oliveira, OAB/PA 33.996">
+  <title>TalkEncript</title>
+  <link rel="icon" href="img/favicon.png" type="image/png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bloqueado">
+ <div id="progresso-geracao" class="bloqueio progresso-tela" role="dialog" aria-modal="true" aria-labelledby="progresso-titulo" hidden>
+    <div class="bloqueio-caixa">
+      <h2 id="progresso-titulo">Gerando o relatório</h2>
+      <div class="porcentagem" aria-live="polite"><span id="progresso-pct">0</span>%</div>
+      <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="progresso-titulo"><div class="barra-preenchida"></div></div>
+      <p id="progresso-etapa" class="ajuda">Preparando...</p>
+      <div class="acoes fim"><button id="gerar-cancelar" class="botao secundario" type="button">Cancelar</button></div>
+    </div>
+  </div>
+  <div id="bloqueio-localizacao" class="bloqueio" role="alertdialog" aria-modal="true" aria-live="assertive">
+    <div class="bloqueio-caixa">
+      <div class="marca-inicial"><img class="simbolo" src="img/simbolo.png" alt="Símbolo do GestorLaw: ramo de oliveira" width="131" height="40"><strong>GestorLaw - TalkEncript V 2.1</strong></div>
+      <h2>Autorização de localização</h2>
+      <p></p>
+      <div class="acoes"></div>
+    </div>
+  </div>
+  <header class="topo">
+    <div class="topo-interno">
+      <div class="marca">
+        <img class="simbolo" src="img/simbolo.png" alt="Símbolo do GestorLaw: ramo de oliveira" width="111" height="34">
+        <div>
+          <strong>TalkEncript</strong>
+          <span>Relatório de integridade de conversas por hash</span>
+        </div>
+      </div>
+      <nav class="abas" role="tablist">
+        <button role="tab" data-aba="operador" aria-selected="true">Operador</button>
+        <button role="tab" data-aba="gerar">Gerar relatório</button>
+        <button role="tab" data-aba="verificar">Verificar</button>
+        <button role="tab" data-aba="sobre">Sobre</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- OPERADOR -->
+    <section id="aba-operador" class="aba" role="tabpanel">
+      <div id="operador-resumo" class="cartao" hidden>
+        <h2>Operador identificado</h2>
+        <dl id="operador-dados" class="dados"></dl>
+        <div class="acoes">
+          <button id="operador-editar" class="botao secundario">Editar dados</button>
+          <button id="operador-sair" class="botao perigo">Apagar meus dados deste dispositivo</button>
+          <button id="operador-ir-gerar" class="botao primario">Gerar relatório</button>
+        </div>
+      </div>
+
+      <form id="operador-form" class="cartao" novalidate>
+        <h2>Cadastro do operador</h2>
+        <p class="ajuda">O operador é a pessoa responsável pela geração do relatório. Os dados abaixo constarão do relatório para identificar quem praticou o ato, como exige a cadeia de custódia. Eles ficam gravados somente neste navegador.</p>
+        <div class="grade">
+          <label class="campo largo">Nome completo
+            <input name="nome" autocomplete="name" required>
+            <small class="erro" data-erro="nome"></small>
+          </label>
+          <label class="campo">Endereço eletrônico
+            <input name="email" type="email" autocomplete="email" required>
+            <small class="erro" data-erro="email"></small>
+          </label>
+          <label class="campo">Celular
+            <input name="celular" inputmode="tel" autocomplete="tel" placeholder="(91) 98888-7777" required>
+            <small class="erro" data-erro="celular"></small>
+          </label>
+          <label class="campo">CPF
+            <input name="cpf" inputmode="numeric" placeholder="000.000.000-00" required>
+            <small class="erro" data-erro="cpf"></small>
+          </label>
+          <label class="campo">Profissão
+            <input name="profissao" autocomplete="organization-title" placeholder="Ex.: Advogado, Perito judicial, Assistente técnico">
+            <small class="erro" data-erro="profissao"></small>
+          </label>
+          <fieldset class="campo">
+            <legend>É advogado(a)?</legend>
+            <label class="opcao"><input type="radio" name="advogado" value="sim"> Sim</label>
+            <label class="opcao"><input type="radio" name="advogado" value="nao" checked> Não</label>
+          </fieldset>
+          <div class="campo largo oab" hidden>
+            <div class="linha">
+              <label>Número de inscrição na OAB
+                <input name="oabNumero" inputmode="numeric" placeholder="12345">
+              </label>
+              <label>Seccional
+                <select name="oabUF"></select>
+              </label>
+            </div>
+            <small class="erro" data-erro="oab"></small>
+          </div>
+          <fieldset class="campo largo empresa-operador">
+            <legend>Escritório ou empresa (opcionais)</legend>
+            <label>Nome do escritório ou empresa
+              <input name="empresaNome" autocomplete="organization" placeholder="Ex.: Souza Advocacia">
+            </label>
+            <label>Endereço do escritório ou empresa
+              <input name="empresaEndereco" autocomplete="street-address" placeholder="Ex.: Av. Presidente Vargas, 1500, sala 801, Campina, Belém/PA, 66017-000">
+            </label>
+            <label>CNPJ/CPF do escritório ou empresa
+              <input name="empresaDocumento" inputmode="numeric" placeholder="00.000.000/0000-00 ou 000.000.000-00">
+            </label>
+            <small class="erro" data-erro="empresaDocumento"></small>
+          </fieldset>
+          <fieldset class="campo largo links-operador">
+            <legend>Links pessoais (opcionais)</legend>
+            <div class="linha">
+              <label>Título do link 1
+                <input name="link1Titulo" placeholder="Ex.: Site do escritório">
+              </label>
+              <label>Endereço do link 1
+                <input name="link1Url" type="url" inputmode="url" placeholder="https://www.exemplo.com.br">
+              </label>
+            </div>
+            <div class="linha">
+              <label>Título do link 2
+                <input name="link2Titulo" placeholder="Ex.: LinkedIn">
+              </label>
+              <label>Endereço do link 2
+                <input name="link2Url" type="url" inputmode="url" placeholder="https://www.linkedin.com/in/seu-perfil">
+              </label>
+            </div>
+            <small class="erro" data-erro="links"></small>
+          </fieldset>
+          <label class="campo largo opcao">
+            <input type="checkbox" name="consentimento">
+            <span>Autorizo o tratamento dos meus dados pessoais exclusivamente para identificação do operador nos relatórios emitidos, nos termos da Lei nº 13.709/2018 (LGPD). Estou ciente de que os dados ficam armazenados apenas neste dispositivo e podem ser apagados a qualquer momento.</span>
+          </label>
+          <small class="erro largo" data-erro="consentimento"></small>
+        </div>
+        <div class="acoes">
+          <button type="button" id="operador-cancelar" class="botao secundario" hidden>Cancelar</button>
+          <button type="submit" class="botao primario">Salvar cadastro</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- GERAR -->
+    <section id="aba-gerar" class="aba" role="tabpanel" hidden>
+      <div id="gerar-bloqueio" class="aviso">Para gerar um relatório, faça antes o cadastro do operador.</div>
+
+      <div id="gerar-conteudo">
+        <div class="cartao">
+          <h2>1. Dados da conversa</h2>
+          <div class="grade">
+            <label class="campo largo">Título do relatório (opcional)
+              <input id="caso-titulo" maxlength="140" placeholder="Ex.: Conversa Maria Souza e João Lima - acordo de pagamento" autocomplete="off">
+              <small class="ajuda">Aparece na capa do relatório. Se ficar em branco, o título é formado pelo aplicativo e pelos nomes dos interlocutores.</small>
+            </label>
+            <label class="campo">Aplicativo
+              <select name="plataforma" id="caso-plataforma"></select>
+            </label>
+            <label class="campo">Tipo de exportação
+              <select id="caso-tipo">
+                <option value="auto">Identificar automaticamente</option>
+                <option value="Com mídia">Com mídia</option>
+                <option value="Sem mídia">Sem mídia</option>
+              </select>
+            </label>
+            <label class="campo"><span id="rotulo-versao">Versão do WhatsApp</span>
+              <input id="caso-versao" placeholder="Ex.: 2.26.18.73" autocomplete="off">
+              <small class="ajuda" id="dica-versao"></small>
+            </label>
+            <div class="campo"></div>
+            <label class="campo">Data da conversa
+              <input id="caso-conversa-inicio" type="date">
+            </label>
+            <label class="campo">Data final da conversa (se durou mais de um dia)
+              <input id="caso-conversa-fim" type="date">
+            </label>
+            <fieldset class="campo largo interlocutores">
+              <legend>Interlocutores da conversa</legend>
+              <div id="lista-interlocutores"></div>
+              <small class="erro" id="erro-interlocutores"></small>
+              <div><button type="button" id="adicionar-interlocutor" class="botao secundario">Adicionar interlocutor</button></div>
+              <datalist id="sugestoes-qualificacao">
+                <option value="Reclamante"></option>
+                <option value="Reclamado(a)"></option>
+                <option value="Autor(a)"></option>
+                <option value="Réu / Ré"></option>
+                <option value="Demandante"></option>
+                <option value="Demandado(a)"></option>
+                <option value="Requerente"></option>
+                <option value="Requerido(a)"></option>
+                <option value="Exequente"></option>
+                <option value="Executado(a)"></option>
+                <option value="Vítima"></option>
+                <option value="Investigado(a)"></option>
+                <option value="Testemunha"></option>
+                <option value="Esposa"></option>
+                <option value="Marido"></option>
+                <option value="Cônjuge"></option>
+                <option value="Ex-cônjuge"></option>
+                <option value="Companheiro(a)"></option>
+                <option value="Genitor(a)"></option>
+                <option value="Filho(a)"></option>
+                <option value="Empregador(a)"></option>
+                <option value="Empregado(a)"></option>
+                <option value="Cliente"></option>
+                <option value="Fornecedor(a)"></option>
+                <option value="Advogado(a)"></option>
+                <option value="Preposto(a)"></option>
+              </datalist>
+              <label class="relacao-interlocutores">Relação entre os interlocutores (opcional)
+                <input id="caso-relacao" placeholder="Ex.: ex-cônjuges em ação de divórcio; empregadora e ex-empregado em reclamação trabalhista">
+              </label>
+              <small class="ajuda">Em cada interlocutor, a qualificação no caso é opcional: escolha uma das sugestões ou escreva livremente (por exemplo, Reclamante, Reclamado, Esposa, Marido). Ela identifica a posição de cada pessoa; a relação entre os interlocutores descreve o vínculo entre elas.</small>
+            </fieldset>
+            <label class="campo">Modelo do aparelho ou conta de origem
+              <input id="caso-origem" placeholder="Ex.: iPhone 15 de Maria Souza">
+            </label>
+            <div class="campo">
+              <label class="campo" for="caso-imei">IMEI do aparelho (15 dígitos)
+                <input id="caso-imei" inputmode="numeric" autocomplete="off" maxlength="18" placeholder="Digite *#06# no telefone para ver o IMEI">
+              </label>
+              <details class="ajuda-imei" open>
+                <summary>Como consultar o IMEI</summary>
+                <ol>
+                  <li>Em qualquer celular: abra o aplicativo Telefone, digite <strong>*#06#</strong> como se fosse fazer uma ligação e o IMEI aparecerá na tela.</li>
+                  <li>No iPhone: abra Ajustes, toque em Geral, depois em Sobre, e role a tela até encontrar IMEI.</li>
+                  <li>No Android: abra Configurações, toque em Sobre o telefone e procure IMEI (em alguns modelos, dentro de Status ou Informações do IMEI).</li>
+                  <li>Sem acesso ao aparelho: o IMEI consta da caixa original, da nota fiscal de compra e, em alguns modelos, da bandeja do chip.</li>
+                </ol>
+                <p>Celulares com dois chips têm dois IMEIs. Informe o IMEI do chip em que está a linha usada na conversa (IMEI 1 para o chip 1 e IMEI 2 para o chip 2). Os 15 números podem ser digitados com ou sem espaços.</p>
+              </details>
+              <small class="ajuda">O IMEI completo é usado só para conferência e não fica gravado; o relatório exibe apenas os 4 primeiros e os 3 últimos dígitos.</small>
+              <label class="opcao"><input type="checkbox" id="caso-sem-imei"> Não se aplica (exportação feita pelo computador ou aparelho sem IMEI)</label>
+              <small class="erro" id="erro-imei"></small>
+            </div>
+            <label class="campo">Data da exportação
+              <input id="caso-data" type="date">
+            </label>
+            <label class="campo">Processo ou referência
+              <input id="caso-processo" placeholder="Ex.: 0801234-56.2026.8.14.0301">
+            </label>
+            <label class="campo">Local (cidade e UF)
+              <input id="caso-local" placeholder="Ex.: Belém/PA">
+            </label>
+            <label class="campo largo">Finalidade do relatório
+              <textarea id="caso-finalidade" rows="2" placeholder="Ex.: instruir ação de cobrança no processo nº 0801234-56.2026.8.14.0301, demonstrando o acordo de pagamento feito por WhatsApp."></textarea>
+            </label>
+            <label class="campo largo">Observações
+              <textarea id="caso-observacoes" rows="2" placeholder="Como e por quem a conversa foi exportada, cuidados adotados etc."></textarea>
+            </label>
+          </div>
+        </div>
+
+        <div class="cartao">
+          <h2>2. Arquivos da conversa</h2>
+          <p class="ajuda">Envie o arquivo exportado (por exemplo, "Conversa do WhatsApp com Fulano.zip" ou "_chat.txt"), a pasta exportada pelo Telegram (com result.json ou messages.html e as mídias) ou quaisquer outros arquivos. Os arquivos não saem do seu computador.</p>
+          <div id="zona-arquivos" class="zona" tabindex="0">
+            <strong>Arraste aqui arquivos ou pastas</strong>
+            <span>ou</span>
+            <div class="acoes centro">
+              <label class="botao secundario">Selecionar arquivos<input type="file" id="entrada-arquivos" multiple hidden></label>
+              <label class="botao secundario">Selecionar pasta<input type="file" id="entrada-pasta" webkitdirectory multiple hidden></label>
+            </div>
+          </div>
+          <div id="lista-arquivos" class="lista"></div>
+          <div class="opcoes">
+            <label class="opcao"><input type="checkbox" id="opcao-zip" checked> Calcular também o hash de cada item dentro dos arquivos ZIP (conversa e mídias)</label>
+            <label class="opcao"><input type="checkbox" id="opcao-resumo" checked> Incluir resumo informativo da conversa (quantidade de mensagens, participantes e período)</label>
+          </div>
+        </div>
+
+        <div class="cartao">
+          <h2>3. Prints da conversa (opcional)</h2>
+          <p class="ajuda">Se houver capturas de tela (prints) da conversa, junte-as aqui em JPG, PNG ou PDF para que sejam comparadas com a conversa exportada. Ao juntar um print, descreva no campo dele a mensagem que aparece no print, escrita como está na tela: o sistema procura essa mensagem no texto da conversa exportada e, no relatório, mostra logo abaixo do print a mensagem descrita e a linha da conversa em que ela foi encontrada, com o trecho encontrado em negrito. Para a comparação, os arquivos do passo 2 devem conter o texto da conversa (por exemplo, o _chat.txt do WhatsApp, inclusive dentro do ZIP, ou o result.json do Telegram).</p>
+          <small class="erro" id="erro-prints"></small>
+          <div id="zona-prints" class="zona" tabindex="0">
+            <strong>Arraste aqui os prints</strong>
+            <label class="botao secundario">Selecionar prints<input type="file" id="entrada-prints" accept="image/png,image/jpeg,application/pdf,.png,.jpg,.jpeg,.pdf" multiple hidden></label>
+          </div>
+          <div id="lista-prints" class="lista-prints"></div>
+          <label class="campo limite-prints">Tamanho máximo de cada arquivo de prints
+            <select id="prints-limite">
+              <option value="2000000">2 MB</option>
+              <option value="3000000">3 MB</option>
+              <option value="4000000" selected>4 MB (padrão)</option>
+              <option value="5000000">5 MB</option>
+              <option value="10000000">10 MB</option>
+            </select>
+            <small class="ajuda">Os prints são condensados em um documento PDF para juntada aos autos, com até seis prints por página. Se ultrapassarem o tamanho escolhido, o documento é dividido em partes (Prints parte 1 de 2, Prints parte 2 de 2 e assim por diante). Escolha o limite aceito pelo sistema do tribunal em que o documento será juntado.</small>
+          </label>
+        </div>
+
+        <div class="cartao">
+          <h2>4. Localização e declaração</h2>
+          <div class="geo">
+            <button id="geo-obter" class="botao secundario" type="button">Atualizar localização</button>
+            <span id="geo-status" class="ajuda">A localização precisa (raio de até 100 metros) é obrigatória e será lida novamente no momento da geração.</span>
+            <a id="geo-mapa" class="ajuda" target="_blank" rel="noopener noreferrer" hidden>Ver no Google Maps</a>
+          </div>
+          <label class="opcao">
+            <input type="checkbox" id="opcao-endereco" checked>
+            <span>Descrever o endereço por extenso no relatório (tipo de logradouro, logradouro, raio de localização, números de imóveis próximos, CEP, bairro, cidade, Estado e país). Para isso, somente as coordenadas são enviadas ao serviço de mapas OpenStreetMap; os arquivos da conversa não saem do computador. Requer conexão com a internet.</span>
+          </label>
+          <label class="opcao declaracao">
+            <input type="checkbox" id="declaracao">
+            <span id="declaracao-texto">Declaro, sob as penas da lei, que os arquivos selecionados foram obtidos por meio da função de exportação da própria plataforma e não foram por mim editados, que os prints eventualmente juntados não sofreram edição, e que as informações prestadas neste formulário são verdadeiras.</span>
+          </label>
+        </div>
+
+        <div class="cartao">
+          <h2>5. Assinatura digital (opcional)</h2>
+          <p class="ajuda">Assine o relatório em PDF com o seu certificado digital A1 (arquivo .pfx ou .p12, por exemplo o e-CPF ou o certificado da OAB). A assinatura segue o padrão PAdES e é feita neste computador: o certificado e a senha não saem do navegador e não são guardados. O certificado A3 (cartão ou token) não pode ser usado aqui; nesse caso, assine o PDF depois, no assinador que você já usa.</p>
+          <div class="grade">
+            <label class="campo">Certificado A1 (.pfx ou .p12)
+              <input type="file" id="cert-arquivo" accept=".pfx,.p12,application/x-pkcs12">
+            </label>
+            <label class="campo">Senha do certificado
+              <input type="password" id="cert-senha" autocomplete="off">
+            </label>
+          </div>
+          <div class="acoes">
+            <button id="cert-conferir" class="botao secundario" type="button">Conferir certificado</button>
+            <button id="cert-remover" class="botao secundario" type="button" hidden>Não assinar</button>
+          </div>
+          <div id="cert-status" class="ajuda" aria-live="polite"></div>
+        </div>
+
+        <div class="acoes fim">
+          <button id="gerar" class="botao primario grande">Gerar relatório</button>
+        </div>
+        <div id="gerar-erro" class="erro-caixa" hidden></div>
+
+        <div id="resultado" class="cartao destaque" hidden>
+          <h2>Relatório gerado</h2>
+          <dl class="dados" id="resultado-dados"></dl>
+          <div class="hash-linha">
+            <span>Código de verificação</span>
+            <code id="resultado-codigo"></code>
+            <button class="copiar" data-copiar="#resultado-codigo">Copiar</button>
+          </div>
+          <div class="acoes" id="resultado-downloads"></div>
+          <details>
+            <summary>Hashes calculados</summary>
+            <div id="resultado-hashes"></div>
+          </details>
+          <p class="ajuda">Guarde o pacote completo junto com os arquivos originais. Para dar data certa e autoria ao relatório, assine o PDF com certificado ICP-Brasil ou pelo assinador do gov.br.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VERIFICAR -->
+    <section id="aba-verificar" class="aba" role="tabpanel" hidden>
+      <div class="cartao">
+        <h2>Verificar com o relatório ou com um manifesto</h2>
+        <p class="ajuda">Selecione o arquivo relatorio_....json gerado pelo TalkEncript, ou um manifesto .sha256 ou .sha512, e depois os arquivos que deseja conferir (o ZIP da conversa, a pasta ou as mídias extraídas). A comparação é feita pelo conteúdo: um arquivo renomeado, mas íntegro, também é reconhecido.</p>
+        <div class="grade">
+          <label class="campo">Relatório (.json) ou manifesto (.sha256 / .sha512)
+            <input type="file" id="verif-referencia" accept=".json,.sha256,.sha512,.sha1,.md5,.txt">
+          </label>
+          <div class="campo">Arquivos a conferir
+            <div class="acoes">
+              <label class="botao secundario">Selecionar arquivos<input type="file" id="verif-arquivos" multiple hidden></label>
+              <label class="botao secundario">Selecionar pasta<input type="file" id="verif-pasta" webkitdirectory multiple hidden></label>
+            </div>
+            <small id="verif-contagem" class="ajuda"></small>
+          </div>
+        </div>
+        <div class="acoes fim"><button id="verificar" class="botao primario">Verificar</button></div>
+        <div id="verif-progresso" class="progresso" hidden><progress max="1" value="0"></progress><span></span></div>
+        <div id="verif-erro" class="erro-caixa" hidden></div>
+        <div id="verif-resultado" hidden></div>
+      </div>
+
+      <div class="cartao">
+        <h2>Comparar um arquivo com um hash</h2>
+        <p class="ajuda">Cole o hash que consta do relatório, da petição ou de qualquer documento. O algoritmo (MD5, SHA-1, SHA-256, SHA-384 ou SHA-512) é identificado pelo tamanho; maiúsculas, espaços e dois-pontos são ignorados.</p>
+        <div class="grade">
+          <label class="campo">Arquivo
+            <input type="file" id="unico-arquivo">
+          </label>
+          <label class="campo">Hash esperado
+            <input id="unico-hash" class="mono" placeholder="Cole aqui o hash" autocomplete="off" spellcheck="false">
+            <small id="unico-algoritmo" class="ajuda"></small>
+          </label>
+        </div>
+        <div class="acoes fim"><button id="unico-comparar" class="botao primario">Comparar</button></div>
+        <div id="unico-resultado" hidden></div>
+      </div>
+
+      <div class="cartao passos">
+        <h2>Passo a passo para verificar pelo terminal, sem o TalkEncript</h2>
+        <p class="ajuda">O próprio Relatório traz estes comandos já preenchidos com o nome e o hash de cada arquivo. Aqui está o roteiro geral.</p>
+
+        <h3>No Windows</h3>
+        <ol>
+          <li>Coloque o arquivo da conversa em uma pasta, sem alterar o nome.</li>
+          <li>Abra a pasta no Explorador de Arquivos, clique com o botão direito em uma área vazia e escolha "Abrir no Terminal". No Windows 10, segure Shift, clique com o botão direito e escolha "Abrir janela do PowerShell aqui".</li>
+          <li>Cole o comando abaixo, trocando o nome do arquivo e o hash pelos que constam do Relatório, e pressione Enter:
+            <pre><code>(Get-FileHash -Algorithm SHA256 -LiteralPath 'Conversa.zip').Hash -eq 'HASH_DO_RELATORIO'</code></pre></li>
+          <li>True significa arquivo íntegro; False significa arquivo alterado.</li>
+        </ol>
+
+        <h3>No macOS</h3>
+        <ol>
+          <li>Coloque o arquivo da conversa em uma pasta, sem alterar o nome.</li>
+          <li>Abra o Terminal (Aplicativos, Utilitários, Terminal), digite cd e um espaço, arraste a pasta para a janela e pressione Enter.</li>
+          <li>Cole o comando abaixo, trocando HASH_DO_RELATORIO e o nome do arquivo pelos que constam do Relatório (um espaço e um asterisco entre eles), e pressione Enter:
+            <pre><code>echo 'HASH_DO_RELATORIO *Conversa.zip' | shasum -a 256 -c</code></pre></li>
+          <li>OK significa arquivo íntegro; FAILED significa arquivo alterado.</li>
+          <li>Se aparecer "no properly formatted SHA checksum lines found", o comando foi colado com alguma alteração, por exemplo quebrado em duas linhas ou sem o asterisco. Uma forma simples de conferir é executar <code>shasum -a 256 'Conversa.zip'</code> e comparar o resultado com o SHA-256 do Relatório.</li>
+        </ol>
+
+        <h3>No Linux</h3>
+        <ol>
+          <li>Abra o terminal na pasta do arquivo.</li>
+          <li>Execute <code>echo 'HASH_DO_RELATORIO *Conversa.zip' | sha256sum -c</code>.</li>
+          <li>OK significa arquivo íntegro; FAILED significa arquivo alterado.</li>
+        </ol>
+
+        <h3>Todos os arquivos de uma vez, pelo manifesto</h3>
+        <ol>
+          <li>Extraia o pacote do relatório e copie o manifesto arquivos_TE-....sha256 para a pasta dos arquivos da conversa.</li>
+          <li>Abra o terminal nessa pasta e execute <code>shasum -a 256 -c arquivos_TE-....sha256</code> (macOS) ou <code>sha256sum -c arquivos_TE-....sha256</code> (Linux). No Windows, use o comando de manifesto que consta do Relatório.</li>
+          <li>Cada arquivo deve aparecer com OK.</li>
+        </ol>
+
+        <h3>Conferência do próprio relatório</h3>
+        <ol>
+          <li>Calcule o SHA-256 do arquivo relatorio_TE-....json com os mesmos comandos.</li>
+          <li>O resultado deve ser igual ao código de verificação impresso no início e no rodapé de cada página do Relatório.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- SOBRE -->
+    <section id="aba-sobre" class="aba" role="tabpanel" hidden>
+      <div class="cartao">
+        <h2>Sobre o TalkEncript</h2>
+        <p>O TalkEncript gera um relatório de integridade para conversas exportadas do WhatsApp, Telegram ou qualquer outro aplicativo, com ou sem mídias. Para cada arquivo, e para cada item contido nos arquivos ZIP, são calculados os hashes SHA-256 e SHA-512, que funcionam como uma impressão digital do conteúdo: qualquer alteração, por menor que seja, muda completamente o valor.</p>
+        <p>O relatório registra o operador responsável, a data e a hora (do dispositivo e de referência do servidor), a geolocalização autorizada, os parâmetros criptográficos (algoritmo e tamanho do resumo em bits), os metadados dos arquivos, o registro cronológico dos atos praticados, a ferramenta utilizada com o hash do próprio código e as instruções de verificação para macOS, Linux e Windows. É entregue em PDF, em texto puro e em JSON, acompanhado de manifestos no formato padrão dos utilitários sha256sum e shasum.</p>
+        <p>O sistema funciona inteiramente no navegador, em qualquer sistema operacional, sem instalação. Os arquivos da conversa nunca são enviados a servidor: a política de segurança da página só permite a consulta opcional do endereço por extenso ao OpenStreetMap, para a qual são enviadas apenas as coordenadas.</p>
+        <h3>Fundamentação</h3>
+        <p>O relatório adota os requisitos dos arts. 158-A a 158-F do Código de Processo Penal (cadeia de custódia), da ABNT NBR ISO/IEC 27037:2013, da jurisprudência do Superior Tribunal de Justiça sobre prova digital e da minuta de resolução do Conselho Nacional de Justiça sobre cadeia de custódia da prova digital, elaborada pelo grupo de trabalho instituído pela Portaria nº 391/2025. Até 1/10/2026 essa resolução não havia sido aprovada em definitivo; o TalkEncript será atualizado quando houver texto final.</p>
+        <div id="baixar-offline">
+          <h3>Usar sem internet, com dois cliques</h3>
+          <p>Baixe o pacote GestorLaw - TalkEncript V 2.1, extraia em uma pasta do computador e dê dois cliques no arquivo TalkEncript.html: o sistema abre no navegador, sem instalação.</p>
+          <p><a class="botao primario" href="GestorLaw - TalkEncript V 2.1.zip" download>Baixar GestorLaw - TalkEncript V 2.1</a></p>
+        </div>
+        <h3>Sobre o criador</h3>
+        <p>O GestorLaw - TalkEncript foi idealizado e desenvolvido pelo advogado paraense Carlos Alexandre Albuquerque Oliveira, inscrito na Ordem dos Advogados do Brasil, Seção do Pará, sob o nº 33.996. A ferramenta nasceu de uma necessidade concreta da prática forense: oferecer a advogados, peritos e demais profissionais do Direito um meio simples, que funciona em qualquer computador e sem instalação, de preservar conversas eletrônicas como prova, com cálculo de hash, registro da cadeia de custódia e relatório pronto para juntada aos autos.</p>
+        <p>Bacharel em Direito pela Estácio FAP (2019), com trabalho de conclusão de curso dedicado à falibilidade do reconhecimento de pessoas no processo criminal, obteve a habilitação na Ordem dos Advogados do Brasil em 2022. É especialista em Direito Penal e Criminologia pelo Instituto de Criminologia e Política Criminal (ICPC, 2021), em Direito Penal e Processo Penal pelo Centro Universitário Internacional (UNINTER, 2022) e em Direito e Processo do Trabalho, com ênfase em negócios, pela Universidade da Amazônia (UNAMA, 2024), e cursa especialização em Direito Tributário e Processo Tributário na Faculdade Legale.</p>
+        <p>Na advocacia, foi sócio do escritório Sampaio & Oliveira Advogados de 2020 a 2026, onde atuou como advogado criminalista e trabalhista em demandas consultivas e contenciosas e exerceu a coordenação geral, de planejamento e de marketing. Desde 2026 atua de forma autônoma, à frente de Carlos A. A. Oliveira, Assessoria e Consultoria Jurídica, nas áreas cível, trabalhista e penal, com ênfase em compliance empresarial e trabalhista, gestão jurídica e estruturação de programas de integridade corporativa.</p>
+        <p>A preocupação com a integridade da prova acompanha sua trajetória desde antes da advocacia. Ex-servidor público, atuou de 2017 a 2019 no Centro de Perícias Científicas Renato Chaves, no Pará, como assistente de coordenação, e reúne experiência no serviço público em gestão de unidades, cadeia de custódia, procedimentos administrativos e transferência de provas. No mesmo período, participou do Laboratório de Ciências Criminais do Instituto Brasileiro de Ciências Criminais (IBCCRIM). Complementou a formação com cursos sobre proteção de dados pessoais pela Escola Superior de Advocacia, sobre execução penal e compliance pela Escola Superior do Ministério Público da União e sobre o Sistema Eletrônico de Execução Unificado (SEEU) pelo Superior Tribunal de Justiça e pelo Conselho Nacional de Justiça.</p>
+        <p>O TalkEncript reúne essas duas vivências, a do serviço público voltado à prova e a da advocacia, em uma ferramenta que adota os arts. 158-A a 158-F do Código de Processo Penal, a norma ABNT NBR ISO/IEC 27037:2013 e a orientação do Superior Tribunal de Justiça sobre a prova digital.</p>
+        <p>Currículo Lattes: <a href="https://lattes.cnpq.br/4151018791454248" target="_blank" rel="noopener noreferrer">https://lattes.cnpq.br/4151018791454248</a>. ORCID: <a href="https://orcid.org/0000-0003-0680-4424" target="_blank" rel="noopener noreferrer">https://orcid.org/0000-0003-0680-4424</a>.</p>
+        <h3>Componentes de código aberto</h3>
+        <p>hash-wasm 4.12.0 (MIT), fflate 0.8.2 (MIT), jsPDF 4.2.1 (MIT) e fonte Liberation Sans 2.1 (SIL OFL 1.1), com as mesmas métricas da Arial. Versão do aplicativo: GestorLaw - TalkEncript <span id="versao"></span>.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="rodape">
+    TalkEncript, criado por Carlos Alexandre Albuquerque Oliveira, advogado, OAB/PA 33.996. Processamento local: nenhum arquivo é enviado à internet.
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

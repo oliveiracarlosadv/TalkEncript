@@ -1,0 +1,73 @@
+name: TalkEncript
+
+on:
+  push:
+    paths:
+      - "TalkEncript/**"
+      - ".github/workflows/talkencript.yml"
+  pull_request:
+    paths:
+      - "TalkEncript/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: TalkEncript
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar dependências de montagem
+        run: npm install
+      - name: Testes unitários
+        run: npm test
+      - name: Montar o aplicativo (TalkEncript.html)
+        run: npm run build
+      - name: Instalar o leitor de PDF usado nos testes (pdftotext)
+        run: sudo apt-get update -q && sudo apt-get install -y -q poppler-utils
+      - name: Preparar navegador
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Teste de ponta a ponta
+        run: npm run e2e
+      - name: Disponibilizar o arquivo único para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: GestorLaw - TalkEncript V 2.1
+          path: TalkEncript/GestorLaw - TalkEncript V 2.1.zip
+
+  publicar:
+    # Publica no GitHub Pages a partir do branch principal, somente depois que a
+    # variável do repositório PUBLICAR_PAGES for criada com o valor true
+    # (Settings, Secrets and variables, Actions, Variables).
+    if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch && vars.PUBLICAR_PAGES == 'true'
+    needs: testes
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Montar o arquivo único
+        working-directory: TalkEncript
+        run: npm install && npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: TalkEncript
+      - id: deploy
+        uses: actions/deploy-pages@v4

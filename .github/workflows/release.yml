@@ -1,0 +1,82 @@
+name: Publicar versão do TalkEncript
+
+# Cria uma release no GitHub com o pacote do aplicativo. Para uma nova versão, crie
+# e envie a tag (por exemplo, git tag v2.1.0 && git push origin v2.1.0) ou execute
+# este fluxo pela aba Actions, informando a versão e, se preciso, o commit de origem.
+# As notas da release vêm da seção correspondente de TalkEncript/NOVIDADES.md.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      versao:
+        description: "Versão (tag), por exemplo v2.0.0"
+        required: true
+      origem:
+        description: "Commit ou branch de origem (padrão: main)"
+        required: false
+        default: main
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    env:
+      VERSAO: ${{ github.event.inputs.versao || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.origem || github.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Montar o aplicativo e executar os testes unitários
+        working-directory: TalkEncript
+        run: |
+          npm install
+          npm test
+          npm run build
+      - name: Preparar os arquivos da release
+        run: |
+          set -euo pipefail
+          PACOTE="$(ls TalkEncript/GestorLaw\ -\ TalkEncript\ V\ *.zip | head -n 1)"
+          TITULO="$(basename "$PACOTE" .zip)"
+          mkdir -p dist
+          # Nome sem espaços, igual em todas as versões, para o link de download
+          # .../releases/latest/download/GestorLaw-TalkEncript.zip
+          cp "$PACOTE" dist/GestorLaw-TalkEncript.zip
+          cp TalkEncript/TalkEncript.html dist/TalkEncript.html
+          (cd dist && sha256sum -b GestorLaw-TalkEncript.zip TalkEncript.html > SHA256SUMS.txt)
+          # Notas: seção da versão em NOVIDADES.md do branch principal.
+          git show "origin/${{ github.event.repository.default_branch }}:TalkEncript/NOVIDADES.md" > novidades.md 2>/dev/null || cp TalkEncript/NOVIDADES.md novidades.md 2>/dev/null || true
+          awk -v v="## ${VERSAO}" '$0 == v {f=1; next} /^## / {f=0} f' novidades.md > notas.md || true
+          {
+            echo "# ${TITULO}"
+            echo
+            cat notas.md
+            echo
+            echo "## Como baixar e usar"
+            echo
+            echo "1. Baixe o arquivo GestorLaw-TalkEncript.zip, em Assets, abaixo."
+            echo "2. Extraia em uma pasta do computador e dê dois cliques em TalkEncript.html. O mesmo pacote serve para Windows, macOS e Linux."
+            echo
+            echo "Para conferir que o pacote é original, compare o SHA-256 do arquivo baixado com o que consta de SHA256SUMS.txt (no macOS: shasum -a 256 -c SHA256SUMS.txt; no Linux: sha256sum -c SHA256SUMS.txt)."
+          } > release.md
+          echo "TITULO=${TITULO}" >> "$GITHUB_ENV"
+          cat release.md
+      - name: Criar a release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ALVO="$(git rev-parse HEAD)"
+          if gh release view "$VERSAO" >/dev/null 2>&1; then
+            gh release upload "$VERSAO" dist/* --clobber
+            gh release edit "$VERSAO" --title "$TITULO" --notes-file release.md
+          else
+            gh release create "$VERSAO" dist/* --title "$TITULO" --notes-file release.md --target "$ALVO"
+          fi

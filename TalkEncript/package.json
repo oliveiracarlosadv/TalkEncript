@@ -1,0 +1,19 @@
+{
+  "name": "talkencript",
+  "version": "2.1.0",
+  "productName": "GestorLaw - TalkEncript V 2.1",
+  "private": true,
+  "type": "module",
+  "description": "Relatório de integridade (hash) de conversas exportadas do WhatsApp, Telegram e outros aplicativos, executado no navegador.",
+  "author": "Carlos Alexandre Albuquerque Oliveira (OAB/PA 33.996)",
+  "scripts": {
+    "start": "python3 -m http.server 8080 --bind 127.0.0.1",
+    "test": "node --test tests/unit.test.mjs",
+    "e2e": "node tests/e2e.cjs",
+    "build": "node scripts/build-single.mjs",
+    "build:verificador": "node scripts/build-verificador-online.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}
